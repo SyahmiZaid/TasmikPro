@@ -1,0 +1,110 @@
+/* Course Page Styles */
+.course-header {
+    background: linear-gradient(to right, #8e2de2, #4a00e0);
+    color: white;
+    padding: 2rem;
+    margin-bottom: 1rem;
+}
+
+.course-header-content {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.course-title {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.course-navigation {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.course-navigation .nav-tabs {
+    border-bottom: 2px solid #dee2e6;
+}
+
+.course-navigation .nav-link {
+    color: #6c757d;
+}
+
+.course-navigation .nav-link.active {
+    border-bottom: 2px solid #4a00e0;
+    color: #4a00e0;
+}
+
+.course-sidebar {
+    background-color: #f1f3f4;
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.course-periods .period {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.course-periods .period:last-child {
+    border-bottom: none;
+}
+
+.course-periods h5 {
+    color: #4a00e0;
+    margin-bottom: 0.75rem;
+}
+
+.course-periods .period-items {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.course-periods .period-items li {
+    padding: 0.25rem 0;
+    color: #333;
+}
+
+.announcement {
+    background-color: #f8f9fa;
+    border-left: 4px solid #4a00e0;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.announcement h5 {
+    color: #4a00e0;
+    margin-bottom: 0.75rem;
+}
+
+.custom-banner-bg {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: url('/assets/img/Vle-Banner.jpg') no-repeat;
+    background-size: cover;
+    background-position: center;
+}
+
+.custom-banner-content {
+    position: relative;
+    z-index: 2;
+    padding: 32px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    color: white;
+}
+
+.custom-banner-title {
+    font-size: 42px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.custom-banner-subtitle {
+    font-size: 16px;
+    font-weight: 400;
+}

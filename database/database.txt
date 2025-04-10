@@ -1,0 +1,218 @@
+-- Table: users --
+CREATE TABLE `users` (
+  `userid` VARCHAR(50) NOT NULL,
+  `email` VARCHAR(255) NOT NULL,
+  `password` VARCHAR(255) NOT NULL,
+  `role` ENUM('admin','teacher','student','parent') NOT NULL,
+  `firstname` VARCHAR(100) NOT NULL,
+  `lastname` VARCHAR(100) NOT NULL,
+  `createdat` TIMESTAMP NOT NULL DEFAULT current_timestamp(),
+  `profile_image` VARCHAR(255) DEFAULT NULL,
+  PRIMARY KEY (`userid`),
+  UNIQUE KEY `email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Table: admin --
+CREATE TABLE `admin` (
+  `adminid` VARCHAR(50) NOT NULL,
+  `userid` VARCHAR(50) DEFAULT NULL,
+  PRIMARY KEY (`adminid`),
+  UNIQUE KEY `userid` (`userid`),
+  CONSTRAINT `admin_ibfk_1` FOREIGN KEY (`userid`) REFERENCES `users` (`userid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Table: student --
+CREATE TABLE `student` (
+  `studentid` VARCHAR(50) NOT NULL,
+  `userid` VARCHAR(50) DEFAULT NULL,
+  `halaqahid` INT(11) DEFAULT NULL,
+  `parentid` VARCHAR(50) DEFAULT NULL,
+  `form` VARCHAR(100) DEFAULT NULL,
+  `class` VARCHAR(100) DEFAULT NULL,
+  `ic` VARCHAR(100) DEFAULT NULL,
+  `gender` ENUM('male','female','other') DEFAULT NULL,
+  PRIMARY KEY (`studentid`),
+  UNIQUE KEY `userid` (`userid`),
+  KEY `parentid` (`parentid`),
+  CONSTRAINT `student_ibfk_1` FOREIGN KEY (`userid`) REFERENCES `users` (`userid`),
+  CONSTRAINT `student_ibfk_2` FOREIGN KEY (`parentid`) REFERENCES `parent` (`parentid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Table: teacher --
+CREATE TABLE `teacher` (
+  `teacherid` VARCHAR(50) NOT NULL,
+  `userid` VARCHAR(50) DEFAULT NULL,
+  `halaqahid` VARCHAR(50) DEFAULT NULL,
+  `gender` ENUM('male','female','other') DEFAULT NULL,
+  PRIMARY KEY (`teacherid`),
+  UNIQUE KEY `userid` (`userid`),
+  CONSTRAINT `teacher_ibfk_1` FOREIGN KEY (`userid`) REFERENCES `users` (`userid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Table: parent --
+CREATE TABLE `parent` (
+  `parentid` VARCHAR(50) NOT NULL,
+  `userid` VARCHAR(50) DEFAULT NULL,
+  `contact` VARCHAR(255) DEFAULT NULL,
+  PRIMARY KEY (`parentid`),
+  UNIQUE KEY `userid` (`userid`),
+  CONSTRAINT `parent_ibfk_1` FOREIGN KEY (`userid`) REFERENCES `users` (`userid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Table: tasmik --
+CREATE TABLE `tasmik` (
+    `tasmikid` VARCHAR(20) PRIMARY KEY,
+    `studentid` VARCHAR(20) NOT NULL,
+    `tasmik_date` DATE NOT NULL,
+    `juzuk` INT NOT NULL,
+    `start_page` INT NOT NULL,
+    `end_page` INT NOT NULL,
+    `start_ayah` INT NOT NULL,
+    `end_ayah` INT NOT NULL,
+    `live_conference` ENUM('yes', 'no') NOT NULL,
+    .status'	enum('pending', 'approved', 'rejected'),
+    `submitted_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`studentid`) REFERENCES `student`(`studentid`) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- Table: halaqah --
+CREATE TABLE halaqah (
+    halaqahid VARCHAR(50) NOT NULL,
+    halaqahname VARCHAR(100) NOT NULL,
+    PRIMARY KEY (halaqahid)
+);
+
+-- Table: announcement --
+CREATE TABLE announcement (
+    announcementid VARCHAR(20) PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    created_at DATETIME NOT NULL,
+    target_audience VARCHAR(255) NOT NULL,
+    userid VARCHAR(20) NOT NULL,
+    FOREIGN KEY (userid) REFERENCES users(userid)
+);
+
+-- Table: document --
+CREATE TABLE document (
+  documentid VARCHAR(20) PRIMARY KEY,
+  userid VARCHAR(20) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  path VARCHAR(255) NOT NULL,
+  uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Table: zoom_meetings --
+CREATE TABLE `zoom_meetings` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `tasmikid` VARCHAR(20) NOT NULL,
+  `studentid` VARCHAR(50) NOT NULL,
+  `teacherid` VARCHAR(50) NOT NULL,
+  `meeting_id` VARCHAR(50) NOT NULL,
+  `password` VARCHAR(50) NOT NULL,
+  `meeting_link` VARCHAR(255) NOT NULL,
+  `scheduled_at` DATETIME NOT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `tasmikid` (`tasmikid`),
+  CONSTRAINT `zoom_meetings_ibfk_1` FOREIGN KEY (`tasmikid`) REFERENCES `tasmik` (`tasmikid`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Table: vle_courses
+CREATE TABLE `vle_courses` (
+  `courseid` VARCHAR(50) NOT NULL,
+  `course_name` VARCHAR(255) NOT NULL,
+  `description` TEXT NOT NULL,
+  `created_by` VARCHAR(50) NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`courseid`),
+  FOREIGN KEY (`created_by`) REFERENCES `teacher` (`teacherid`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `vle_enrollment` (
+  `studentid` VARCHAR(50) NOT NULL,
+  `courseid` VARCHAR(50) NOT NULL,
+  `enrolled_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`studentid`, `courseid`),
+  FOREIGN KEY (`studentid`) REFERENCES `student` (`studentid`) ON DELETE CASCADE,
+  FOREIGN KEY (`courseid`) REFERENCES `vle_courses` (`courseid`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+-- Table: vle_tasmik_submissions
+CREATE TABLE `vle_tasmik_submissions` (
+  `submissionid` VARCHAR(50) NOT NULL,
+  `studentid` VARCHAR(50) NOT NULL,
+  `teacherid` VARCHAR(50) NOT NULL,
+  `juzuk` INT NOT NULL,
+  `start_page` INT NOT NULL,
+  `end_page` INT NOT NULL,
+  `start_ayah` INT NOT NULL,
+  `end_ayah` INT NOT NULL,
+  `audio_path` VARCHAR(255) NOT NULL,  -- Path to the uploaded audio file
+  `status` ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+  `submitted_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`submissionid`),
+  FOREIGN KEY (`studentid`) REFERENCES `student` (`studentid`) ON DELETE CASCADE,
+  FOREIGN KEY (`teacherid`) REFERENCES `teacher` (`teacherid`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Table: vle_assessments (Combines Assignments & Quizzes)
+CREATE TABLE `vle_assessments` (
+  `assessmentid` VARCHAR(50) NOT NULL,
+  `courseid` VARCHAR(50) NOT NULL,
+  `teacherid` VARCHAR(50) NOT NULL,
+  `title` VARCHAR(255) NOT NULL,
+  `description` TEXT NOT NULL,
+  `type` ENUM('assignment', 'quiz') NOT NULL,  
+  `open_date` DATETIME DEFAULT NULL,  -- NEW: When the assessment becomes visible
+  `due_date` DATETIME NOT NULL,  -- Now NOT NULL to ensure all assessments have a deadline
+  `duration_minutes` INT DEFAULT NULL,  -- For quizzes (if applicable)
+  `attachment_path` VARCHAR(255) DEFAULT NULL,  
+  `allow_resubmission` BOOLEAN DEFAULT FALSE,  -- Allow resubmission before the deadline
+  `status` ENUM('draft', 'published', 'closed') DEFAULT 'published',  -- NEW: Track if assessment is active
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`assessmentid`),
+  FOREIGN KEY (`courseid`) REFERENCES `vle_courses` (`courseid`) ON DELETE CASCADE,
+  FOREIGN KEY (`teacherid`) REFERENCES `teacher` (`teacherid`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Table: vle_assessment_submissions (Tracks Student Submissions)
+CREATE TABLE `vle_assessment_submissions` (
+  `submissionid` VARCHAR(50) NOT NULL,
+  `assessmentid` VARCHAR(50) NOT NULL,
+  `studentid` VARCHAR(50) NOT NULL,
+  `file_path` VARCHAR(255) DEFAULT NULL,  
+  `status` ENUM('pending', 'graded') DEFAULT 'pending',
+  `submitted_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `score` INT DEFAULT NULL,  
+  `resubmission_count` INT DEFAULT 0,  -- NEW: Tracks how many times a student resubmits
+  PRIMARY KEY (`submissionid`),
+  FOREIGN KEY (`assessmentid`) REFERENCES `vle_assessments` (`assessmentid`) ON DELETE CASCADE,
+  FOREIGN KEY (`studentid`) REFERENCES `student` (`studentid`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Table: vle_notifications (New table for sending notifications)
+CREATE TABLE `vle_notifications` (
+  `notificationid` VARCHAR(50) NOT NULL,
+  `userid` VARCHAR(50) NOT NULL,  
+  `message` TEXT NOT NULL,  
+  `is_read` BOOLEAN DEFAULT FALSE,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`notificationid`),
+  FOREIGN KEY (`userid`) REFERENCES `users` (`userid`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+-- Table: notifications (Generalized Notification System)
+CREATE TABLE `notifications` (
+  `notificationid` VARCHAR(50) NOT NULL,
+  `userid` VARCHAR(50) NOT NULL,  -- Can be any user (student, teacher, parent, admin)
+  `type` ENUM('assessment', 'tasmik', 'feedback', 'announcement', 'system') NOT NULL,  
+  `referenceid` VARCHAR(50) DEFAULT NULL,  -- Links to assessmentid, tasmikid, etc.
+  `message` TEXT NOT NULL,  
+  `is_read` BOOLEAN DEFAULT FALSE,  
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  
+  PRIMARY KEY (`notificationid`),
+  FOREIGN KEY (`userid`) REFERENCES `users` (`userid`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
