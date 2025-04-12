@@ -1,6 +1,34 @@
-<?php $pageTitle = "VLE"; 
-$breadcrumb = "Pages / VLE"; 
-include '../include/header.php'; 
+<?php
+$pageTitle = "VLE - Student Portal";
+$breadcrumb = "Pages / VLE - Student Portal";
+include '../include/header.php';
+
+// Start session and get the logged-in user's ID
+session_start();
+$userid = $_SESSION['userid'] ?? ''; // Assuming userid is stored in session
+
+// Database connection
+require_once '../database/db_connection.php';
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Fetch the student ID using the user ID
+$studentSql = "SELECT studentid FROM student WHERE userid = ?";
+$studentStmt = $conn->prepare($studentSql);
+if (!$studentStmt) {
+    die("Query preparation failed: " . $conn->error);
+}
+$studentStmt->bind_param("s", $userid);
+$studentStmt->execute();
+$studentResult = $studentStmt->get_result();
+
+if ($studentResult->num_rows > 0) {
+    $studentRow = $studentResult->fetch_assoc();
+    $studentId = $studentRow['studentid'];
+} else {
+    die("Student ID not found for the logged-in user.");
+}
 ?>
 
 <div class="container">
@@ -8,10 +36,9 @@ include '../include/header.php';
         <div class="page-header">
             <h4 class="page-title"><?php echo $pageTitle; ?></h4>
         </div>
-        
-        <!-- VLE Dashboard -->
+
+        <!-- Welcome Message -->
         <div class="row">
-            <!-- Welcome Message -->
             <div class="col-md-12">
                 <div class="card mb-4">
                     <div class="card-header">
@@ -22,8 +49,10 @@ include '../include/header.php';
                     </div>
                 </div>
             </div>
-            
-            <!-- Course Progress -->
+        </div>
+
+        <!-- Course Progress -->
+        <div class="row">
             <div class="col-md-6">
                 <div class="card mb-4">
                     <div class="card-header">
@@ -37,7 +66,7 @@ include '../include/header.php';
                         <div class="progress mb-4" style="height: 10px;">
                             <div class="progress-bar bg-success" role="progressbar" style="width: 75%" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
-                        
+
                         <div class="d-flex justify-content-between mb-3">
                             <span>Maharat Al Quran</span>
                             <span>45%</span>
@@ -45,18 +74,10 @@ include '../include/header.php';
                         <div class="progress mb-4" style="height: 10px;">
                             <div class="progress-bar bg-primary" role="progressbar" style="width: 45%" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
-                        
-                        <!-- <div class="d-flex justify-content-between mb-3">
-                            <span>Database Design</span>
-                            <span>30%</span>
-                        </div>
-                        <div class="progress mb-4" style="height: 10px;">
-                            <div class="progress-bar bg-info" role="progressbar" style="width: 30%" aria-valuenow="30" aria-valuemin="0" aria-valuemax="100"></div>
-                        </div> -->
                     </div>
                 </div>
             </div>
-            
+
             <!-- Calendar -->
             <div class="col-md-6">
                 <div class="card mb-4">
@@ -92,8 +113,8 @@ include '../include/header.php';
                 </div>
             </div>
         </div>
-        
-        <!-- Courses Section -->
+
+        <!-- My Courses Section -->
         <div class="row mt-4">
             <div class="col-md-12">
                 <div class="card mb-4">
@@ -103,141 +124,45 @@ include '../include/header.php';
                     <div class="card-body">
                         <div class="row">
                             <?php
-                            // Sample courses array - in a real implementation, this would come from a database
-                            $courses = [
-                                [
-                                    'title' => 'Hifz Al Quran',
-                                    'instructor' => 'Ustaz Abdul Rahman',
-                                    'image' => '../assets/img/courses/programming.jpg',
-                                    'progress' => 75,
-                                    'color' => 'success'
-                                ],
-                                [
-                                    'title' => 'Maharat Al Quran',
-                                    'instructor' => 'Ustazah Aisha, Ustazah Maryam',
-                                    'image' => '../assets/img/courses/webdev.jpg',
-                                    'progress' => 45,
-                                    'color' => 'primary'
-                                ],
-                                // [
-                                //     'title' => 'Database Design',
-                                //     'instructor' => 'Dr. Robert Johnson',
-                                //     'image' => '../assets/img/courses/database.jpg',
-                                //     'progress' => 30,
-                                //     'color' => 'info'
-                                // ],
-                                // [
-                                //     'title' => 'UX Design Principles',
-                                //     'instructor' => 'Sarah Williams',
-                                //     'image' => '../assets/img/courses/uxdesign.jpg',
-                                //     'progress' => 10,
-                                //     'color' => 'warning'
-                                // ]
-                            ];
-                            
-                            // Display courses
-                            foreach($courses as $course) {
-                                ?>
-                                <div class="col-md-3 mb-4">
-                                    <div class="card h-100">
-                                        <img src="<?php echo $course['image']; ?>" class="card-img-top" alt="<?php echo $course['title']; ?>" onerror="this.src='../assets/img/blogpost.jpg'">
-                                        <div class="card-body">
-                                            <h5 class="card-title"><?php echo $course['title']; ?></h5>
-                                            <p class="card-text text-muted">Instructor: <?php echo $course['instructor']; ?></p>
-                                            <div class="progress mt-3 mb-1" style="height: 5px;">
-                                                <div class="progress-bar bg-<?php echo $course['color']; ?>" role="progressbar" style="width: <?php echo $course['progress']; ?>%" aria-valuenow="<?php echo $course['progress']; ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                            // Fetch courses the student is enrolled in
+                            $courseSql = "SELECT c.courseid, c.course_name, c.description, u.firstname AS teacher_firstname, u.lastname AS teacher_lastname
+                                          FROM vle_courses c
+                                          JOIN vle_enrollment e ON c.courseid = e.courseid
+                                          JOIN teacher t ON c.created_by = t.teacherid
+                                          JOIN users u ON t.userid = u.userid
+                                          WHERE e.studentid = ?";
+                            $courseStmt = $conn->prepare($courseSql);
+                            $courseStmt->bind_param("s", $studentId);
+                            $courseStmt->execute();
+                            $courseResult = $courseStmt->get_result();
+
+                            if ($courseResult->num_rows > 0):
+                                while ($course = $courseResult->fetch_assoc()): ?>
+                                    <div class="col-md-4 mb-4">
+                                        <div class="card h-100">
+                                            <img src="../assets/img/courses/default.jpg" class="card-img-top" alt="<?php echo htmlspecialchars($course['course_name']); ?>" onerror="this.src='../assets/img/blogpost.jpg'">
+                                            <div class="card-body">
+                                                <h5 class="card-title"><?php echo htmlspecialchars($course['course_name']); ?></h5>
+                                                <p class="card-text text-muted">Instructor: <?php echo htmlspecialchars($course['teacher_firstname'] . ' ' . $course['teacher_lastname']); ?></p>
+                                                <p class="card-text"><?php echo htmlspecialchars($course['description']); ?></p>
                                             </div>
-                                            <small class="text-muted"><?php echo $course['progress']; ?>% Complete</small>
-                                        </div>
-                                        <div class="card-footer bg-transparent border-0">
-                                            <a href="#" class="btn btn-primary btn-sm btn-block"><i class="fas fa-play mr-1"></i> Continue Learning</a>
+                                            <div class="card-footer bg-transparent border-0">
+                                                <a href="course_student.php?courseid=<?php echo htmlspecialchars($course['courseid']); ?>" class="btn btn-primary btn-sm btn-block"><i class="fas fa-eye mr-1"></i> View Course</a>
+                                            </div>
                                         </div>
                                     </div>
+                                <?php endwhile;
+                            else: ?>
+                                <div class="col-md-12">
+                                    <p class="text-muted text-center">You are not enrolled in any courses yet.</p>
                                 </div>
-                                <?php
-                            }
-                            ?>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <!-- Learning Resources and Forums -->
-        <div class="row mt-4">
-            <!-- Resources -->
-            <!-- <div class="col-md-6">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h4 class="card-title">Learning Resources</h4>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-group">
-                            <li class="list-group-item d-flex align-items-center">
-                                <i class="fas fa-file-pdf mr-3 text-danger"></i>
-                                <div>
-                                    <h6 class="mb-0">Introduction to JavaScript</h6>
-                                    <small class="text-muted">PDF Document • 2.4MB</small>
-                                </div>
-                                <a href="#" class="btn btn-sm btn-outline-primary ml-auto"><i class="fas fa-download mr-1"></i> Download</a>
-                            </li>
-                            <li class="list-group-item d-flex align-items-center">
-                                <i class="fas fa-video mr-3 text-primary"></i>
-                                <div>
-                                    <h6 class="mb-0">CSS Grid Tutorial</h6>
-                                    <small class="text-muted">Video • 18:34</small>
-                                </div>
-                                <a href="#" class="btn btn-sm btn-outline-primary ml-auto"><i class="fas fa-play mr-1"></i> Watch</a>
-                            </li>
-                            <li class="list-group-item d-flex align-items-center">
-                                <i class="fas fa-link mr-3 text-info"></i>
-                                <div>
-                                    <h6 class="mb-0">SQL Basics Cheat Sheet</h6>
-                                    <small class="text-muted">External Resource</small>
-                                </div>
-                                <a href="#" class="btn btn-sm btn-outline-primary ml-auto"><i class="fas fa-external-link-alt mr-1"></i> Visit</a>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div> -->
-            
-            <!-- Forums -->
-            <!-- <div class="col-md-6">
-                <div class="card mb-4">
-                    <div class="card-header d-flex justify-content-between">
-                        <h4 class="card-title">Recent Forum Discussions</h4>
-                        <button class="btn btn-sm btn-primary"><i class="fas fa-comments mr-1"></i> All Forums</button>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-group">
-                            <li class="list-group-item">
-                                <div class="d-flex justify-content-between">
-                                    <h6 class="mb-0">Help with JavaScript Functions</h6>
-                                    <span class="badge badge-primary">5 replies</span>
-                                </div>
-                                <small class="text-muted">Posted by Alex T. • 2 hours ago</small>
-                            </li>
-                            <li class="list-group-item">
-                                <div class="d-flex justify-content-between">
-                                    <h6 class="mb-0">Database Normalization Question</h6>
-                                    <span class="badge badge-primary">12 replies</span>
-                                </div>
-                                <small class="text-muted">Posted by Maria L. • 1 day ago</small>
-                            </li>
-                            <li class="list-group-item">
-                                <div class="d-flex justify-content-between">
-                                    <h6 class="mb-0">Group Project Teams Formation</h6>
-                                    <span class="badge badge-primary">8 replies</span>
-                                </div>
-                                <small class="text-muted">Posted by Instructor • 3 days ago</small>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div> -->
-        </div>
-        
+
         <!-- Announcements Section -->
         <div class="row mt-4">
             <div class="col-md-12">
@@ -263,4 +188,8 @@ include '../include/header.php';
     </div>
 </div>
 
-<?php include '../include/footer.php'; ?>
+<?php
+// Close database connection
+$conn->close();
+include '../include/footer.php';
+?>

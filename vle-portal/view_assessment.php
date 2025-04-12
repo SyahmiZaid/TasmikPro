@@ -177,7 +177,7 @@ if (isset($_GET['id'])) {
                         <i class="fas fa-edit me-1"></i> Edit Assessment
                     </a>
 
-                    <a href="view_submissions.php?assessment_id=<?php echo $assessmentId; ?>" class="btn btn-success">
+                    <a href="manage_submission.php?assessment_id=<?php echo $assessmentId; ?>" class="btn btn-success">
                         <i class="fas fa-users me-1"></i> View Submissions
                     </a>
 
