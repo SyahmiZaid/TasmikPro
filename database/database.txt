@@ -164,9 +164,9 @@ CREATE TABLE `vle_assessments` (
   `teacherid` VARCHAR(50) NOT NULL,
   `title` VARCHAR(255) NOT NULL,
   `description` TEXT NOT NULL,
-  `type` ENUM('assignment', 'quiz') NOT NULL,  
+  `type` ENUM('exercise', 'note', 'tasmik', 'murajaah') NOT NULL,  
   `open_date` DATETIME DEFAULT NULL,  -- NEW: When the assessment becomes visible
-  `due_date` DATETIME NOT NULL,  -- Now NOT NULL to ensure all assessments have a deadline
+  `due_date` DATETIME NULL,  -- Now NOT NULL to ensure all assessments have a deadline
   `duration_minutes` INT DEFAULT NULL,  -- For quizzes (if applicable)
   `attachment_path` VARCHAR(255) DEFAULT NULL,  
   `allow_resubmission` BOOLEAN DEFAULT FALSE,  -- Allow resubmission before the deadline

@@ -75,8 +75,8 @@ while ($row = $assessmentResult->fetch_assoc()) {
                 <div class="custom-banner-container" style="height: 200px; margin-top: 0; padding-top: 0;">
                     <div class="custom-banner-bg"></div>
                     <div class="custom-banner-content col-md-8">
-                        <h1 class="custom-banner-title"><?php echo htmlspecialchars($courseName); ?></h1>
-                        <p class="custom-banner-subtitle">Instructor: <?php echo htmlspecialchars($teacherName); ?></p>
+                        <h1 class="custom-banner-title"><?php echo htmlspecialchars(ucwords($courseName)); ?></h1>
+                        <p class="custom-banner-subtitle">Instructor: <?php echo htmlspecialchars(ucwords($teacherName)); ?></p>
                     </div>
                 </div>
             </div>
@@ -104,8 +104,7 @@ while ($row = $assessmentResult->fetch_assoc()) {
                                     <div class="card-header d-flex justify-content-between align-items-center">
                                         <div class="d-flex align-items-center">
                                             <h4 class="card-title mb-0 me-2" style="color: black">
-                                                <?php echo htmlspecialchars($assessment['type'] == 'assignment' ? 'Assignment: ' : 'Quiz: '); ?>
-                                                <?php echo htmlspecialchars($assessment['title']); ?>
+                                                <?php echo ucfirst(htmlspecialchars($assessment['type'])); ?>: <?php echo htmlspecialchars($assessment['title']); ?>
                                             </h4>
                                             <span class="badge bg-<?php echo $assessment['status'] == 'published' ? 'success' : ($assessment['status'] == 'draft' ? 'warning' : 'danger'); ?>">
                                                 <?php echo ucfirst(htmlspecialchars($assessment['status'])); ?>
@@ -113,14 +112,19 @@ while ($row = $assessmentResult->fetch_assoc()) {
                                         </div>
                                     </div>
                                     <div class="card-body">
-                                        <p><?php echo htmlspecialchars($assessment['description']); ?></p>
-                                        <p><strong>Due Date:</strong> <?php echo date('F j, Y, g:i a', strtotime($assessment['due_date'])); ?></p>
-                                        <?php if ($assessment['type'] == 'quiz' && !empty($assessment['duration_minutes'])): ?>
-                                            <p><strong>Duration:</strong> <?php echo htmlspecialchars($assessment['duration_minutes']); ?> minutes</p>
-                                        <?php endif; ?>
-                                        <a href="assessment_submission.php?id=<?php echo htmlspecialchars($assessment['assessmentid']); ?>" class="btn btn-primary">
-                                            View Details
-                                        </a>
+                                        <div class="row">
+                                            <div class="col-md-8">
+                                                <p><?php echo htmlspecialchars($assessment['description']); ?></p>
+                                                <?php if ($assessment['type'] !== 'note'): ?>
+                                                    <p><strong>Due Date:</strong> <?php echo date('F j, Y, g:i a', strtotime($assessment['due_date'])); ?></p>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="col-md-4 d-flex justify-content-end align-items-end flex-column">
+                                                <a href="assessment_submission.php?id=<?php echo htmlspecialchars($assessment['assessmentid']); ?>" class="btn custom-view-details mb-2">
+                                                    View Details
+                                                </a>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -140,104 +144,12 @@ while ($row = $assessmentResult->fetch_assoc()) {
 
                 <!-- Grades Tab -->
                 <div class="tab-pane fade" id="pills-grades" role="tabpanel" aria-labelledby="pills-grades-tab">
-                    <div class="col-md-12">
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h4 class="card-title mb-0" style="color: black">Grades</h4>
-                            </div>
-                            <div class="card-body">
-                                <?php
-                                // Get grades for the student
-                                $gradesSql = "SELECT a.title, a.type, sub.submitted_at, sub.status, sub.score 
-                                              FROM vle_assessments a
-                                              JOIN vle_assessment_submissions sub ON a.assessmentid = sub.assessmentid
-                                              WHERE a.courseid = ? AND sub.studentid = ?
-                                              ORDER BY a.title";
-                                $gradesStmt = $conn->prepare($gradesSql);
-                                $gradesStmt->bind_param("ss", $courseId, $studentId);
-                                $gradesStmt->execute();
-                                $gradesResult = $gradesStmt->get_result();
-                                ?>
-
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>Assessment</th>
-                                            <th>Type</th>
-                                            <th>Submitted</th>
-                                            <th>Status</th>
-                                            <th>Score</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php if ($gradesResult->num_rows > 0): ?>
-                                            <?php while ($grade = $gradesResult->fetch_assoc()): ?>
-                                                <tr>
-                                                    <td><?php echo htmlspecialchars($grade['title']); ?></td>
-                                                    <td><?php echo ucfirst(htmlspecialchars($grade['type'])); ?></td>
-                                                    <td><?php echo date('F j, Y, g:i a', strtotime($grade['submitted_at'])); ?></td>
-                                                    <td>
-                                                        <span class="badge bg-<?php echo $grade['status'] == 'graded' ? 'success' : 'warning'; ?>">
-                                                            <?php echo ucfirst(htmlspecialchars($grade['status'])); ?>
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        <?php if ($grade['status'] == 'graded' && $grade['score'] !== null): ?>
-                                                            <?php echo htmlspecialchars($grade['score']); ?>
-                                                        <?php else: ?>
-                                                            <span class="text-muted">Not graded</span>
-                                                        <?php endif; ?>
-                                                    </td>
-                                                </tr>
-                                            <?php endwhile; ?>
-                                        <?php else: ?>
-                                            <tr>
-                                                <td colspan="5" class="text-center">No grades available for this course.</td>
-                                            </tr>
-                                        <?php endif; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Grades content here -->
                 </div>
 
                 <!-- Announcements Tab -->
                 <div class="tab-pane fade" id="pills-announcements" role="tabpanel" aria-labelledby="pills-announcements-tab">
-                    <div class="col-md-12">
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h4 class="card-title mb-0" style="color: black">Announcements</h4>
-                            </div>
-                            <div class="card-body">
-                                <?php
-                                // Get announcements for the course
-                                $announcementSql = "SELECT * FROM announcement WHERE target_audience = ? ORDER BY created_at DESC";
-                                $announcementStmt = $conn->prepare($announcementSql);
-                                $announcementStmt->bind_param("s", $courseName);
-                                $announcementStmt->execute();
-                                $announcementResult = $announcementStmt->get_result();
-
-                                if ($announcementResult->num_rows > 0): ?>
-                                    <?php while ($announcement = $announcementResult->fetch_assoc()): ?>
-                                        <div class="card mb-4">
-                                            <div class="card-header">
-                                                <h5 class="card-title mb-0"><?php echo htmlspecialchars($announcement['title']); ?></h5>
-                                            </div>
-                                            <div class="card-body">
-                                                <p><?php echo htmlspecialchars($announcement['message']); ?></p>
-                                                <p class="text-muted">Posted on: <?php echo date('F j, Y, g:i a', strtotime($announcement['created_at'])); ?></p>
-                                            </div>
-                                        </div>
-                                    <?php endwhile; ?>
-                                <?php else: ?>
-                                    <div class="alert alert-info" role="alert">
-                                        No announcements found for this course.
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Announcements content here -->
                 </div>
             </div>
         </div>
@@ -249,3 +161,18 @@ while ($row = $assessmentResult->fetch_assoc()) {
 $conn->close();
 include '../include/footer.php';
 ?>
+
+<!-- Custom Styles -->
+<style>
+    .custom-view-details {
+        background-color: #f0f8ff;
+        color: #007bff;
+        border: 1px solid #d1e7ff;
+    }
+
+    .custom-view-details:hover {
+        background-color: rgb(198, 225, 255);
+        color: #0056b3;
+        border-color: rgb(104, 137, 184);
+    }
+</style>

@@ -169,9 +169,9 @@ if (isset($_GET['id'])) {
 
                 <!-- Action Buttons -->
                 <div class="d-flex mt-4">
-                    <button onclick="history.back()" class="btn btn-outline-secondary me-2">
+                    <a href="course.php?courseid=<?php echo htmlspecialchars($assessment['courseid']); ?>" class="btn btn-outline-secondary me-2">
                         <i class="fas fa-arrow-left me-1"></i> Back to Course
-                    </button>
+                    </a>
 
                     <a href="edit_assessment.php?id=<?php echo $assessmentId; ?>" class="btn btn-primary me-2">
                         <i class="fas fa-edit me-1"></i> Edit Assessment

@@ -36,7 +36,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = $_POST['title'];
     $description = $_POST['description'];
     $type = $_POST['type'];
-    $dueDate = $_POST['due_date'];
+    $openDate = !empty($_POST['open_date']) ? $_POST['open_date'] : null;
+    $dueDate = !empty($_POST['due_date']) ? $_POST['due_date'] : null;
+    $allowResubmission = isset($_POST['allow_resubmission']) ? 1 : 0;
+    $status = $_POST['status'];
     $attachmentPath = null;
 
     // Handle file upload
@@ -49,12 +52,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         move_uploaded_file($_FILES['attachment']['tmp_name'], $attachmentPath);
     }
 
+    // Automatically set status to "draft" if open date is in the future
+    if (!empty($openDate) && strtotime($openDate) > time()) {
+        $status = 'draft';
+    }
+
     // Insert assignment into database
     $assessmentId = uniqid('assess_');
-    $sql = "INSERT INTO vle_assessments (assessmentid, courseid, teacherid, title, description, type, due_date, attachment_path) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+    $sql = "INSERT INTO vle_assessments (assessmentid, courseid, teacherid, title, description, type, open_date, due_date, attachment_path, allow_resubmission, status) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ssssssss", $assessmentId, $courseId, $teacherId, $title, $description, $type, $dueDate, $attachmentPath);
+    $stmt->bind_param("sssssssssis", $assessmentId, $courseId, $teacherId, $title, $description, $type, $openDate, $dueDate, $attachmentPath, $allowResubmission, $status);
 
     if ($stmt->execute()) {
         echo "<div class='alert alert-success'>Assignment created successfully! Redirecting to the course page...</div>";
@@ -68,13 +76,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="container">
     <div class="page-inner">
         <div class="page-header">
-            <h4 class="page-title"><?php echo $pageTitle; ?></h4>
         </div>
         <div class="d-flex align-items-left align-items-md-center flex-column flex-md-row pt-2 pb-4">
         </div>
 
         <!-- Assignment Creation Form -->
-        <div class="card">
+        <div class="card" style="margin-top: -50px;">
             <div class="card-header">
                 <h4>Create Assignment</h4>
             </div>
@@ -90,24 +97,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="form-group">
                         <label for="type">Type</label>
-                        <select name="type" id="type" class="form-control" required>
-                            <option value="assignment">Assignment</option>
-                            <option value="quiz">Quiz</option>
+                        <select name="type" id="type" class="form-control" required onchange="toggleFields()">
+                            <option value="exercise">Exercise</option>
+                            <option value="note">Note</option>
+                            <option value="tasmik">Tasmik</option>
+                            <option value="murajaah">Murajaah</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label for="due_date">Due Date</label>
-                        <input type="datetime-local" name="due_date" id="due_date" class="form-control" required>
+                    <div class="form-group" id="open-date-group">
+                        <label for="open_date">Open Date</label>
+                        <input type="datetime-local" name="open_date" id="open_date" class="form-control">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" id="due-date-group">
+                        <label for="due_date">Due Date</label>
+                        <input type="datetime-local" name="due_date" id="due_date" class="form-control">
+                    </div>
+                    <div class="form-group" id="attachment-group">
                         <label for="attachment">Attachment (Optional)</label>
                         <input type="file" name="attachment" id="attachment" class="form-control">
                     </div>
-                    <button type="submit" class="btn btn-primary">Create Assignment</button>
+                    <div class="form-group">
+                        <label for="allow_resubmission">Allow Resubmission</label>
+                        <input type="checkbox" name="allow_resubmission" id="allow_resubmission">
+                    </div>
+                    <div class="form-group">
+                        <label for="status">Status</label>
+                        <select name="status" id="status" class="form-control" required>
+                            <option value="draft">Draft</option>
+                            <option value="published">Published</option>
+                        </select>
+                    </div>
+                    <div class="d-flex mt-4" style="padding-left: 10px;">
+                        <a href="course.php?courseid=<?php echo htmlspecialchars($courseId); ?>" class="btn btn-outline-secondary me-2">
+                            <i class="fas fa-arrow-left me-1"></i> Back
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> Create Assignment
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    function toggleFields() {
+        const type = document.getElementById('type').value;
+        const dueDateGroup = document.getElementById('due-date-group');
+        const openDateGroup = document.getElementById('open-date-group');
+        const attachmentGroup = document.getElementById('attachment-group');
+
+        if (type === 'note') {
+            dueDateGroup.style.display = 'none';
+            openDateGroup.style.display = 'none';
+            attachmentGroup.style.display = 'block';
+        } else if (type === 'exercise' || type === 'tasmik' || type === 'murajaah') {
+            dueDateGroup.style.display = 'block';
+            openDateGroup.style.display = 'block';
+            attachmentGroup.style.display = 'block';
+        }
+    }
+
+    // Initialize fields on page load
+    document.addEventListener('DOMContentLoaded', toggleFields);
+</script>
 
 <?php include '../include/footer.php'; ?>

@@ -12,6 +12,10 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
+// Get success or error messages from the URL
+$successMessage = isset($_GET['success']) ? $_GET['success'] : '';
+$errorMessage = isset($_GET['error']) ? $_GET['error'] : '';
+
 // Get course details
 $courseSql = "SELECT c.course_name, u.firstname, u.lastname 
               FROM vle_courses c
@@ -48,7 +52,6 @@ $assessments = [];
 while ($row = $assessmentResult->fetch_assoc()) {
     $assessments[] = $row;
 }
-
 ?>
 
 <div class="container">
@@ -62,7 +65,6 @@ while ($row = $assessmentResult->fetch_assoc()) {
                 <div class="custom-banner-container" style="Height: 200px">
                     <div class="custom-banner-bg"></div>
                     <div class="custom-banner-content col-md-8">
-                        <!-- Content updated to use dynamic data -->
                         <h1 class="custom-banner-title"><?php echo htmlspecialchars($courseName); ?></h1>
                         <p class="custom-banner-subtitle"><?php echo htmlspecialchars($teacherName); ?></p>
                     </div>
@@ -84,7 +86,6 @@ while ($row = $assessmentResult->fetch_assoc()) {
             </ul>
             <div class="tab-content mt-2 mb-3" id="pills-tabContent">
                 <div class="tab-pane fade show active" id="pills-home" role="tabpanel" aria-labelledby="pills-home-tab">
-                    <!-- Add Assignment Button -->
                     <div class="mb-3">
                         <a href="create_assignment.php?courseid=<?php echo htmlspecialchars($courseId); ?>" class="btn btn-success">
                             <i class="fas fa-plus"></i> Add Assignment
@@ -99,43 +100,30 @@ while ($row = $assessmentResult->fetch_assoc()) {
                                     <div class="card-header d-flex justify-content-between align-items-center">
                                         <div class="d-flex align-items-center">
                                             <h4 class="card-title mb-0 me-2" style="color: black">
-                                                <?php echo htmlspecialchars($assessment['type'] == 'assignment' ? 'Assignment: ' : 'Quiz: '); ?>
-                                                <?php echo htmlspecialchars($assessment['title']); ?>
+                                                <?php echo ucfirst(htmlspecialchars($assessment['type'])); ?>: <?php echo htmlspecialchars($assessment['title']); ?>
                                             </h4>
                                             <span class="badge bg-<?php echo $assessment['status'] == 'published' ? 'success' : ($assessment['status'] == 'draft' ? 'warning' : 'danger'); ?>">
                                                 <?php echo ucfirst(htmlspecialchars($assessment['status'])); ?>
                                             </span>
                                         </div>
-                                        <a href="edit_assessment.php?id=<?php echo htmlspecialchars($assessment['assessmentid']); ?>" class="text-warning">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
+                                        <div>
+                                            <a href="edit_assessment.php?id=<?php echo htmlspecialchars($assessment['assessmentid']); ?>" class="text-warning me-2">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <!-- Delete Button -->
+                                            <button type="button" class="btn btn-link text-danger p-0" style="border: none; background: none;" onclick="confirmDelete('<?php echo htmlspecialchars($assessment['assessmentid']); ?>', '<?php echo htmlspecialchars($courseId); ?>')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
                                     </div>
-                                    <style>
-                                        /* Custom style for the View Details button */
-                                        .custom-view-details {
-                                            background-color: #f0f8ff;
-                                            /* Light white with a hint of blue */
-                                            color: #007bff;
-                                            /* Blue text color */
-                                            border: 1px solid #d1e7ff;
-                                            /* Light blue border */
-                                        }
-
-                                        .custom-view-details:hover {
-                                            background-color:rgb(198, 225, 255);
-                                            /* Slightly darker blue on hover */
-                                            color: #0056b3;
-                                            /* Darker blue text on hover */
-                                            border-color:rgb(104, 137, 184);
-                                            /* Darker border on hover */
-                                        }
-                                    </style>
                                     <div class="card-body">
                                         <div class="row">
                                             <div class="col-md-8">
                                                 <p><?php echo htmlspecialchars($assessment['description']); ?></p>
-                                                <p><strong>Due Date:</strong> <?php echo date('F j, Y, g:i a', strtotime($assessment['due_date'])); ?></p>
-                                                <?php if ($assessment['type'] == 'quiz' && !empty($assessment['duration_minutes'])): ?>
+                                                <?php if ($assessment['type'] !== 'note'): ?>
+                                                    <p><strong>Due Date:</strong> <?php echo date('F j, Y, g:i a', strtotime($assessment['due_date'])); ?></p>
+                                                <?php endif; ?>
+                                                <?php if ($assessment['type'] === 'exercise' && !empty($assessment['duration_minutes'])): ?>
                                                     <p><strong>Duration:</strong> <?php echo htmlspecialchars($assessment['duration_minutes']); ?> minutes</p>
                                                 <?php endif; ?>
                                             </div>
@@ -164,133 +152,12 @@ while ($row = $assessmentResult->fetch_assoc()) {
 
                 <!-- Participants Tab -->
                 <div class="tab-pane fade" id="pills-profile" role="tabpanel" aria-labelledby="pills-profile-tab">
-                    <div class="col-md-12">
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h4 class="card-title mb-0" style="color: black">Participants</h4>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-12">
-                                        <?php
-                                        // Get enrolled students
-                                        $enrollmentSql = "SELECT s.studentid, u.firstname, u.lastname, u.email, 
-                                                         s.form, s.class, e.enrolled_at 
-                                                         FROM vle_enrollment e
-                                                         JOIN student s ON e.studentid = s.studentid
-                                                         JOIN users u ON s.userid = u.userid
-                                                         WHERE e.courseid = ?
-                                                         ORDER BY u.lastname, u.firstname";
-                                        $enrollmentStmt = $conn->prepare($enrollmentSql);
-                                        $enrollmentStmt->bind_param("s", $courseId);
-                                        $enrollmentStmt->execute();
-                                        $enrollmentResult = $enrollmentStmt->get_result();
-                                        ?>
-
-                                        <table class="table table-striped">
-                                            <thead>
-                                                <tr>
-                                                    <th>Student Name</th>
-                                                    <th>Email</th>
-                                                    <th>Form/Class</th>
-                                                    <th>Enrolled On</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php if ($enrollmentResult->num_rows > 0): ?>
-                                                    <?php while ($student = $enrollmentResult->fetch_assoc()): ?>
-                                                        <tr>
-                                                            <td><?php echo htmlspecialchars($student['firstname'] . ' ' . $student['lastname']); ?></td>
-                                                            <td><?php echo htmlspecialchars($student['email']); ?></td>
-                                                            <td><?php echo htmlspecialchars($student['form'] . ' ' . $student['class']); ?></td>
-                                                            <td><?php echo date('F j, Y', strtotime($student['enrolled_at'])); ?></td>
-                                                        </tr>
-                                                    <?php endwhile; ?>
-                                                <?php else: ?>
-                                                    <tr>
-                                                        <td colspan="4" class="text-center">No students enrolled in this course</td>
-                                                    </tr>
-                                                <?php endif; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Participants content here -->
                 </div>
 
                 <!-- Grades Tab -->
                 <div class="tab-pane fade" id="pills-contact" role="tabpanel" aria-labelledby="pills-contact-tab">
-                    <div class="col-md-12">
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h4 class="card-title mb-0" style="color: black">Grades</h4>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-12">
-                                        <?php
-                                        // Get assessment submissions and grades
-                                        $gradesSql = "SELECT a.title, a.type, s.studentid, u.firstname, u.lastname, 
-                                                     sub.submitted_at, sub.status, sub.score 
-                                                     FROM vle_assessments a
-                                                     JOIN vle_assessment_submissions sub ON a.assessmentid = sub.assessmentid
-                                                     JOIN student s ON sub.studentid = s.studentid
-                                                     JOIN users u ON s.userid = u.userid
-                                                     WHERE a.courseid = ?
-                                                     ORDER BY a.title, u.lastname, u.firstname";
-                                        $gradesStmt = $conn->prepare($gradesSql);
-                                        $gradesStmt->bind_param("s", $courseId);
-                                        $gradesStmt->execute();
-                                        $gradesResult = $gradesStmt->get_result();
-                                        ?>
-
-                                        <table class="table table-striped">
-                                            <thead>
-                                                <tr>
-                                                    <th>Assessment</th>
-                                                    <th>Type</th>
-                                                    <th>Student</th>
-                                                    <th>Submitted</th>
-                                                    <th>Status</th>
-                                                    <th>Score</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php if ($gradesResult->num_rows > 0): ?>
-                                                    <?php while ($grade = $gradesResult->fetch_assoc()): ?>
-                                                        <tr>
-                                                            <td><?php echo htmlspecialchars($grade['title']); ?></td>
-                                                            <td><?php echo ucfirst(htmlspecialchars($grade['type'])); ?></td>
-                                                            <td><?php echo htmlspecialchars($grade['firstname'] . ' ' . $grade['lastname']); ?></td>
-                                                            <td><?php echo date('F j, Y, g:i a', strtotime($grade['submitted_at'])); ?></td>
-                                                            <td>
-                                                                <span class="badge bg-<?php echo $grade['status'] == 'graded' ? 'success' : 'warning'; ?>">
-                                                                    <?php echo ucfirst(htmlspecialchars($grade['status'])); ?>
-                                                                </span>
-                                                            </td>
-                                                            <td>
-                                                                <?php if ($grade['status'] == 'graded' && $grade['score'] !== null): ?>
-                                                                    <?php echo htmlspecialchars($grade['score']); ?>
-                                                                <?php else: ?>
-                                                                    <span class="text-muted">Not graded</span>
-                                                                <?php endif; ?>
-                                                            </td>
-                                                        </tr>
-                                                    <?php endwhile; ?>
-                                                <?php else: ?>
-                                                    <tr>
-                                                        <td colspan="6" class="text-center">No submissions found for this course</td>
-                                                    </tr>
-                                                <?php endif; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Grades content here -->
                 </div>
             </div>
         </div>
@@ -302,3 +169,50 @@ while ($row = $assessmentResult->fetch_assoc()) {
 $conn->close();
 include '../include/footer.php';
 ?>
+
+<!-- Include SweetAlert2 Library -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- JavaScript for SweetAlert2 Confirmation -->
+<script>
+    function confirmDelete(assessmentId, courseId) {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "You are about to delete this assessment.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Redirect to delete_assessment.php with the assessment ID and course ID
+                window.location.href = `delete_assessment.php?assessment_id=${encodeURIComponent(assessmentId)}&courseid=${encodeURIComponent(courseId)}`;
+            }
+        });
+    }
+</script>
+
+<!-- Custom Styles -->
+<style>
+    .custom-view-details {
+        background-color: #f0f8ff;
+        color: #007bff;
+        border: 1px solid #d1e7ff;
+    }
+
+    .custom-view-details:hover {
+        background-color: rgb(198, 225, 255);
+        color: #0056b3;
+        border-color: rgb(104, 137, 184);
+    }
+
+    .btn-link i.fas.fa-trash {
+        font-size: 1.2rem;
+    }
+
+    .btn-link i.fas.fa-trash:hover {
+        color: #dc3545;
+    }
+</style>
