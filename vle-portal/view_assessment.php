@@ -3,6 +3,9 @@ $pageTitle = "View Assessment";
 $breadcrumb = "Pages / VLE - Teacher Portal / Course / View Assessment";
 include '../include/header.php';
 
+// Set the correct timezone
+date_default_timezone_set('Asia/Kuala_Lumpur'); // Replace with your timezone
+
 // Fetch assessment details from the database
 if (isset($_GET['id'])) {
     $assessmentId = htmlspecialchars($_GET['id']);
@@ -22,8 +25,15 @@ if (isset($_GET['id'])) {
     // Get time remaining
     $dueDate = new DateTime($assessment['due_date']);
     $now = new DateTime();
-    $interval = $now->diff($dueDate);
+
+    // Check if the due date is in the past
     $isPastDue = $now > $dueDate;
+
+    if ($isPastDue) {
+        $interval = $dueDate->diff($now); // Calculate how much time has passed since the due date
+    } else {
+        $interval = $now->diff($dueDate); // Calculate the remaining time until the due date
+    }
 } else {
     echo "<div class='alert alert-danger text-center'>No assessment ID provided.</div>";
     include '../include/footer.php';
@@ -39,11 +49,16 @@ if (isset($_GET['id'])) {
 
         <!-- Main Content -->
         <div class="card shadow-sm mb-4">
-            <div class="card-header bg-primary text-white py-3">
+            <div class="card-header custom-header d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center">
                     <i class="fas fa-clipboard-check me-2"></i>
                     <h5 class="mb-0"><?php echo htmlspecialchars($assessment['title']); ?></h5>
                 </div>
+                <?php if ($isPastDue): ?>
+                    <span class="badge bg-danger p-2">
+                        <i class="fas fa-exclamation-circle me-1"></i> Past Due Date
+                    </span>
+                <?php endif; ?>
             </div>
 
             <div class="card-body p-4">
@@ -180,17 +195,20 @@ if (isset($_GET['id'])) {
                     <a href="manage_submission.php?assessment_id=<?php echo $assessmentId; ?>" class="btn btn-success">
                         <i class="fas fa-users me-1"></i> View Submissions
                     </a>
-
-                    <?php if ($isPastDue): ?>
-                        <div class="ms-auto">
-                            <span class="badge bg-danger p-2">
-                                <i class="fas fa-exclamation-circle me-1"></i> Past Due Date
-                            </span>
-                        </div>
-                    <?php endif; ?>
                 </div>
             </div>
         </div>
+
+        <!-- Custom Styles -->
+        <style>
+            .custom-header {
+                background-color: rgb(198, 225, 255) !important;
+                color: rgb(1, 78, 161) !important;
+                border-color: rgb(84, 113, 153) !important;
+                font-size: 1.25rem !important;
+                padding: 1rem !important;
+            }
+        </style>
     </div>
 </div>
 

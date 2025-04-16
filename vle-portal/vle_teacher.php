@@ -253,7 +253,7 @@ $courses = $result->fetch_all(MYSQLI_ASSOC);
                                             </div>
                                             <div class="card-footer bg-transparent border-0 d-flex justify-content-between">
                                                 <a href="course.php?courseid=<?php echo $course['courseid']; ?>" class="btn btn-primary btn-sm"><i class="fas fa-eye mr-1"></i> View Details</a>
-                                                <a href="#" class="btn btn-success btn-sm"><i class="fas fa-users mr-1"></i> Manage Students</a>
+                                                <!-- <a href="#" class="btn btn-success btn-sm"><i class="fas fa-users mr-1"></i> Manage Students</a> -->
                                             </div>
                                         </div>
                                     </div>

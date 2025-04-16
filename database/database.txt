@@ -187,6 +187,7 @@ CREATE TABLE `vle_assessment_submissions` (
   `submitted_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `score` INT DEFAULT NULL,  
   `resubmission_count` INT DEFAULT 0,  -- NEW: Tracks how many times a student resubmits
+  'is_done' TINYINT(1) DEFAULT 0;
   PRIMARY KEY (`submissionid`),
   FOREIGN KEY (`assessmentid`) REFERENCES `vle_assessments` (`assessmentid`) ON DELETE CASCADE,
   FOREIGN KEY (`studentid`) REFERENCES `student` (`studentid`) ON DELETE CASCADE

@@ -1,3 +1,4 @@
+<!-- filepath: c:\Users\Asus\OneDrive\Desktop\FYP\(4) Development\TasmikPro\vle-portal\course_student.php -->
 <?php
 $pageTitle = "Course";
 $breadcrumb = "Pages / VLE - Student Portal / Course";
@@ -103,7 +104,30 @@ while ($row = $assessmentResult->fetch_assoc()) {
                                 <div class="card mb-4">
                                     <div class="card-header d-flex justify-content-between align-items-center">
                                         <div class="d-flex align-items-center">
+                                            <!-- Add Icon Based on Assessment Type -->
+                                            <?php
+                                            $icon = '';
+                                            switch ($assessment['type']) {
+                                                case 'exercise':
+                                                    $icon = '<i class="fas fa-clipboard-list me-2" style="color: #007bff;"></i>'; // Exercise icon
+                                                    break;
+                                                case 'note':
+                                                    $icon = '<i class="fas fa-sticky-note me-2" style="color: #ffc107;"></i>'; // Note icon
+                                                    break;
+                                                case 'tasmik':
+                                                    $icon = '<i class="fas fa-book-reader me-2" style="color: #28a745;"></i>'; // Tasmik icon
+                                                    break;
+                                                case 'murajaah':
+                                                    $icon = '<i class="fas fa-book me-2" style="color: #17a2b8;"></i>'; // Murajaah icon
+                                                    break;
+                                                default:
+                                                    $icon = '<i class="fas fa-question-circle me-2" style="color: #6c757d;"></i>'; // Default icon
+                                                    break;
+                                            }
+                                            ?>
+                                            <!-- Display Icon and Title -->
                                             <h4 class="card-title mb-0 me-2" style="color: black">
+                                                <?php echo $icon; ?>
                                                 <?php echo ucfirst(htmlspecialchars($assessment['type'])); ?>: <?php echo htmlspecialchars($assessment['title']); ?>
                                             </h4>
                                             <span class="badge bg-<?php echo $assessment['status'] == 'published' ? 'success' : ($assessment['status'] == 'draft' ? 'warning' : 'danger'); ?>">
@@ -120,7 +144,25 @@ while ($row = $assessmentResult->fetch_assoc()) {
                                                 <?php endif; ?>
                                             </div>
                                             <div class="col-md-4 d-flex justify-content-end align-items-end flex-column">
-                                                <a href="assessment_submission.php?id=<?php echo htmlspecialchars($assessment['assessmentid']); ?>" class="btn custom-view-details mb-2">
+                                                <?php
+                                                // Check if the assessment is marked as done
+                                                $isDoneSql = "SELECT is_done FROM vle_assessment_submissions WHERE assessmentid = ? AND studentid = ?";
+                                                $isDoneStmt = $conn->prepare($isDoneSql);
+                                                $isDoneStmt->bind_param("ss", $assessment['assessmentid'], $studentId);
+                                                $isDoneStmt->execute();
+                                                $isDoneResult = $isDoneStmt->get_result();
+                                                $isDoneRow = $isDoneResult->fetch_assoc();
+                                                $isDone = $isDoneRow['is_done'] ?? 0;
+                                                ?>
+                                                <form id="markAsDoneForm-<?php echo $assessment['assessmentid']; ?>" class="mt-2">
+                                                    <input type="hidden" name="assessment_id" value="<?php echo htmlspecialchars($assessment['assessmentid']); ?>">
+                                                    <input type="hidden" name="student_id" value="<?php echo htmlspecialchars($studentId); ?>">
+                                                    <input type="hidden" name="course_id" value="<?php echo htmlspecialchars($courseId); ?>">
+                                                    <button type="button" class="btn <?php echo $isDone ? 'btn-success' : 'btn-outline-success'; ?>" onclick="toggleMarkAsDone('<?php echo $assessment['assessmentid']; ?>')">
+                                                        <?php echo $isDone ? '<i class="fas fa-check"></i> Done' : 'Mark as Done'; ?>
+                                                    </button>
+                                                </form>
+                                                <a href="assessment_submission.php?id=<?php echo htmlspecialchars($assessment['assessmentid']); ?>" class="btn custom-view-details mb-2" style="margin-top: 10px;">
                                                     View Details
                                                 </a>
                                             </div>
@@ -162,6 +204,52 @@ $conn->close();
 include '../include/footer.php';
 ?>
 
+<script>
+    function toggleMarkAsDone(assessmentId) {
+        const form = document.getElementById(`markAsDoneForm-${assessmentId}`);
+        const formData = new FormData(form);
+        const button = form.querySelector('button');
+
+        // Determine the current state (Done or Mark as Done)
+        const isDone = button.classList.contains('btn-success');
+
+        // Add a flag to the form data to indicate the desired state
+        formData.append('toggle_state', isDone ? 0 : 1); // 1 = Mark as Done, 0 = Undo
+
+        fetch('mark_as_done.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.text();
+                } else {
+                    throw new Error('Failed to toggle mark as done');
+                }
+            })
+            .then(data => {
+                if (data.trim() === 'Success') {
+                    // Toggle the button state dynamically
+                    if (isDone) {
+                        button.classList.remove('btn-success');
+                        button.classList.add('btn-outline-success');
+                        button.innerHTML = 'Mark as Done';
+                    } else {
+                        button.classList.remove('btn-outline-success');
+                        button.classList.add('btn-success');
+                        button.innerHTML = '<i class="fas fa-check"></i> Done';
+                    }
+                } else {
+                    alert('Failed to toggle mark as done: ' + data);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.');
+            });
+    }
+</script>
+
 <!-- Custom Styles -->
 <style>
     .custom-view-details {
@@ -174,5 +262,27 @@ include '../include/footer.php';
         background-color: rgb(198, 225, 255);
         color: #0056b3;
         border-color: rgb(104, 137, 184);
+    }
+
+    .btn-outline-success {
+        background-color: #f8f9fa;
+        color: #28a745;
+        border: 1px solid #28a745;
+    }
+
+    .btn-outline-success:hover {
+        background-color: #28a745;
+        color: #fff;
+    }
+
+    .btn-success {
+        background-color: #28a745;
+        color: #fff;
+        border: 1px solid #28a745;
+    }
+
+    .btn-success:hover {
+        background-color: #218838;
+        border-color: #1e7e34;
     }
 </style>
