@@ -246,7 +246,7 @@ $courses = $result->fetch_all(MYSQLI_ASSOC);
                                 <?php foreach ($courses as $course) { ?>
                                     <div class="col-md-4 mb-4">
                                         <div class="card h-100">
-                                            <img src="../assets/img/courses/default.jpg" class="card-img-top" alt="<?php echo htmlspecialchars($course['course_name']); ?>" onerror="this.src='../assets/img/blogpost.jpg'">
+                                            <img src="../assets/img/TasmiPro/Course.jpg" class="card-img-top" alt="<?php echo htmlspecialchars($course['course_name']); ?>" onerror="this.src='../assets/img/blogpost.jpg'">
                                             <div class="card-body">
                                                 <h5 class="card-title"><?php echo htmlspecialchars($course['course_name']); ?></h5>
                                                 <p class="card-text"><?php echo htmlspecialchars($course['description']); ?></p>

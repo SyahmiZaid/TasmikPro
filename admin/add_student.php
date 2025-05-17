@@ -12,6 +12,17 @@ $halaqah_stmt = $conn->prepare("
 $halaqah_stmt->execute();
 $halaqah_result = $halaqah_stmt->get_result();
 
+// Fetch available VLE courses for auto-enrollment
+$courses_stmt = $conn->prepare("
+    SELECT courseid FROM vle_courses
+");
+$courses_stmt->execute();
+$courses_result = $courses_stmt->get_result();
+$available_courses = [];
+while ($course = $courses_result->fetch_assoc()) {
+    $available_courses[] = $course['courseid'];
+}
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Sanitize input data
     $firstname = trim($_POST['firstname']);
@@ -36,62 +47,73 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($stmt->num_rows > 0) {
             $error_message = "Email already exists.";
         } else {
-            // Hash the default password "123"
-            $password_hash = password_hash("123", PASSWORD_BCRYPT);
+            // Start transaction to ensure all operations succeed
+            $conn->begin_transaction();
+            try {
+                // Hash the default password "123"
+                $password_hash = password_hash("123", PASSWORD_BCRYPT);
 
-            // Generate unique user ID
-            $prefix = "USR";
-            $date = date("ymd"); // Use 'ymd' to get last two digits of the year
-            $stmt = $conn->prepare("SELECT COUNT(*) AS user_count FROM users");
-            $stmt->execute();
-            $stmt->bind_result($user_count);
-            $stmt->fetch();
-            $stmt->close();
-            $user_count++;
-            $userid = $prefix . str_pad($user_count, 2, '0', STR_PAD_LEFT) . $date;
+                // Generate unique user ID
+                $prefix = "USR";
+                $date = date("ymd"); // Use 'ymd' to get last two digits of the year
+                $stmt = $conn->prepare("SELECT COUNT(*) AS user_count FROM users");
+                $stmt->execute();
+                $stmt->bind_result($user_count);
+                $stmt->fetch();
+                $stmt->close();
+                $user_count++;
+                $userid = $prefix . str_pad($user_count, 2, '0', STR_PAD_LEFT) . $date;
 
-            // Generate unique student ID
-            $student_prefix = "STD";
-            $stmt = $conn->prepare("SELECT MAX(CAST(SUBSTRING(studentid, 4) AS UNSIGNED)) AS max_id FROM student");
-            $stmt->execute();
-            $stmt->bind_result($max_id);
-            $stmt->fetch();
-            $stmt->close();
-            $new_id = $max_id + 1;
-            $student_id = $student_prefix . str_pad($new_id, 3, '0', STR_PAD_LEFT);
+                // Generate unique student ID
+                $student_prefix = "STD";
+                $stmt = $conn->prepare("SELECT MAX(CAST(SUBSTRING(studentid, 4) AS UNSIGNED)) AS max_id FROM student");
+                $stmt->execute();
+                $stmt->bind_result($max_id);
+                $stmt->fetch();
+                $stmt->close();
+                $new_id = $max_id + 1;
+                $student_id = $student_prefix . str_pad($new_id, 3, '0', STR_PAD_LEFT);
 
-            // Set role and created_at
-            $role = "Student";
-            $created_at = date("Y-m-d H:i:s");
+                // Set role and created_at
+                $role = "student"; // Changed to lowercase to match database enum
+                $created_at = date("Y-m-d H:i:s");
 
-            // Prepare SQL to insert data into users table
-            $stmt = $conn->prepare("INSERT INTO users (userid, email, password, role, firstname, lastname, createdat) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("sssssss", $userid, $email, $password_hash, $role, $firstname, $lastname, $created_at);
+                // Prepare SQL to insert data into users table
+                $stmt = $conn->prepare("INSERT INTO users (userid, email, password, role, firstname, lastname, createdat) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt->bind_param("sssssss", $userid, $email, $password_hash, $role, $firstname, $lastname, $created_at);
+                $stmt->execute();
+                $stmt->close();
 
-            if ($stmt->execute()) {
                 // Prepare SQL to insert data into student table
                 $stmt_student = $conn->prepare("INSERT INTO student (studentid, userid, halaqahid, form, class, ic, gender) VALUES (?, ?, ?, ?, ?, ?, ?)");
                 $stmt_student->bind_param("sssssss", $student_id, $userid, $halaqahid, $form, $class, $ic, $gender);
+                $stmt_student->execute();
+                $stmt_student->close();
 
-                if ($stmt_student->execute()) {
-                    $success_message = "Student added successfully.";
-
-                    // Redirect to manage_student.php after 1 second
-                    echo "<script>
-                        setTimeout(function() {
-                            window.location.href = 'manage_student.php';
-                        }, 1000);
-                    </script>";
-                } else {
-                    $error_message = "Error: " . $stmt_student->error;
+                // Auto-enroll the student in all available VLE courses
+                foreach ($available_courses as $courseid) {
+                    $enroll_stmt = $conn->prepare("INSERT INTO vle_enrollment (studentid, courseid) VALUES (?, ?)");
+                    $enroll_stmt->bind_param("ss", $student_id, $courseid);
+                    $enroll_stmt->execute();
+                    $enroll_stmt->close();
                 }
 
-                $stmt_student->close();
-            } else {
-                $error_message = "Error: " . $stmt->error;
-            }
+                // Commit the transaction if all operations succeeded
+                $conn->commit();
+                $success_message = "Student added successfully and enrolled in all courses.";
 
-            $stmt->close();
+                // Redirect to manage_student.php after 1 second
+                echo "<script>
+                    setTimeout(function() {
+                        window.location.href = 'manage_student.php';
+                    }, 1000);
+                </script>";
+
+            } catch (Exception $e) {
+                // Rollback the transaction if any operation failed
+                $conn->rollback();
+                $error_message = "Error: " . $e->getMessage();
+            }
         }
     }
 }
@@ -114,9 +136,9 @@ $conn->close();
                         <form action="" method="POST">
                             <?php
                             if (!empty($error_message)) {
-                                echo "<p style='color: red;'>$error_message</p>";
+                                echo "<div class='alert alert-danger'>{$error_message}</div>";
                             } elseif (!empty($success_message)) {
-                                echo "<p style='color: green;'>$success_message</p>";
+                                echo "<div class='alert alert-success'>{$success_message}</div>";
                             }
                             ?>
                             <div class="row">
@@ -162,7 +184,7 @@ $conn->close();
                                 <div class="col-sm-12">
                                     <div class="form-group form-group-default">
                                         <label>Form</label>
-                                        <select name="class" class="form-control" required>
+                                        <select name="form" class="form-control" required>
                                             <option value="">Select Form</option>
                                             <option value="1">1</option>
                                             <option value="2">2</option>

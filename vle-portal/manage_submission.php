@@ -79,6 +79,7 @@ $submissionResult = $submissionStmt->get_result();
                 font-size: 1.25rem !important;
                 padding: 1rem !important;
             }
+
             .custom-header-submission {
                 background-color: rgb(173, 235, 173) !important;
                 color: #004d00 !important;
@@ -125,7 +126,7 @@ $submissionResult = $submissionStmt->get_result();
                                 <tbody>
                                     <?php while ($submission = $submissionResult->fetch_assoc()): ?>
                                         <tr>
-                                            <td><?php echo htmlspecialchars($submission['firstname'] . ' ' . $submission['lastname']); ?></td>
+                                            <td><?php echo htmlspecialchars(ucwords($submission['firstname'] . ' ' . $submission['lastname'])); ?></td>
                                             <td><?php echo date('F j, Y, g:i a', strtotime($submission['submitted_at'])); ?></td>
                                             <td>
                                                 <span class="badge bg-<?php echo $submission['status'] == 'graded' ? 'success' : 'warning'; ?>">
@@ -151,11 +152,11 @@ $submissionResult = $submissionStmt->get_result();
                                                 <?php endif; ?>
                                             </td>
                                             <td>
-                                                <a href="<?php echo htmlspecialchars($submission['file_path']); ?>" target="_blank" class="btn btn-sm btn-info">
+                                                <!-- <a href="<?php echo htmlspecialchars($submission['file_path']); ?>" target="_blank" class="btn btn-sm btn-info">
                                                     <i class="fas fa-eye"></i> View
-                                                </a>
+                                                </a> -->
                                                 <a href="grade_submission.php?submissionid=<?php echo htmlspecialchars($submission['submissionid']); ?>" class="btn btn-sm btn-primary">
-                                                    <i class="fas fa-pen"></i> Grade
+                                                    <i class="fas fa-pen" style="margin-right: 5px;"></i> Grade
                                                 </a>
                                             </td>
                                         </tr>
@@ -172,7 +173,7 @@ $submissionResult = $submissionStmt->get_result();
             </div>
         </div>
         <div class="text-center mt-4">
-            <a href="javascript:history.back()" class="btn btn-secondary btn-lg">
+            <a href="view_assessment.php?id=<?php echo $assessmentId; ?>" class="btn btn-secondary btn-lg">
                 <i class="fas fa-arrow-left"></i> Back
             </a>
         </div>

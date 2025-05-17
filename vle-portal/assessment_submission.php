@@ -99,11 +99,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $assessment['type'] === 'exercise')
             $allowedTypes = array("pdf", "doc", "docx", "txt", "zip");
             if (in_array($fileType, $allowedTypes)) {
                 if (move_uploaded_file($_FILES["submission_file"]["tmp_name"], $targetFilePath)) {
-                    // Insert submission into the database
+                    // Generate unique ID for exercise submission
+                    $vle_prefix = "VLEE"; // VLE + E for Exercise
+                    $date = date('ymd'); // Current date in YYMMDD format
+
+                    // Get count of existing submissions
+                    $stmt = $conn->prepare("SELECT COUNT(*) AS count FROM vle_assessment_submissions");
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+                    $row = $result->fetch_assoc();
+                    $vle_count = $row['count'] + 1;
+                    $stmt->close();
+
+                    // Create submission ID with format VLEE01230429 (for example)
+                    $vle_submission_id = $vle_prefix . str_pad($vle_count, 2, '0', STR_PAD_LEFT) . $date;
+
+                    // Insert submission into the database with custom ID
                     $submissionSql = "INSERT INTO vle_assessment_submissions (submissionid, assessmentid, studentid, file_path, status, is_done) 
-                              VALUES (UUID(), ?, ?, ?, 'pending', 1)";
+                              VALUES (?, ?, ?, ?, 'pending', 1)";
                     $submissionStmt = $conn->prepare($submissionSql);
-                    $submissionStmt->bind_param("sss", $assessmentId, $studentId, $targetFilePath);
+                    $submissionStmt->bind_param("ssss", $vle_submission_id, $assessmentId, $studentId, $targetFilePath);
                     if ($submissionStmt->execute()) {
                         $successMessage = "Your submission has been uploaded successfully.";
                     } else {
@@ -139,7 +154,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $assessment['type'] === 'exercise')
                     </div>
                     <div class="card-body">
                         <p><strong>Description:</strong> <?php echo htmlspecialchars($assessment['description']); ?></p>
-                        <p><strong>Due Date:</strong> <span class="badge bg-danger"><?php echo date('F j, Y, g:i a', strtotime($assessment['due_date'])); ?></span></p>
+                        <?php if ($assessment['type'] !== 'note'): ?>
+                            <p><strong>Due Date:</strong> <span class="badge bg-danger"><?php echo date('F j, Y, g:i a', strtotime($assessment['due_date'])); ?></span></p>
+                        <?php endif; ?>
+
+                        <!-- Display attachment if available -->
+                        <?php if (!empty($assessment['attachment_path'])): ?>
+                            <div class="mt-4">
+                                <p><strong>Attachment:</strong> <?php echo htmlspecialchars(basename($assessment['attachment_path'])); ?></p>
+                                <a href="<?php echo htmlspecialchars($assessment['attachment_path']); ?>" class="btn btn-download btn-sm" download>
+                                    <i class="fas fa-file-download"></i> Download Attachment
+                                </a>
+                            </div>
+                        <?php endif; ?>
+
+                        <style>
+                            .btn-download {
+                                background: linear-gradient(90deg, #4caf50, #81c784);
+                                color: #fff;
+                                border: none;
+                                padding: 6px 12px;
+                                /* Reduced padding for smaller size */
+                                font-size: 0.9rem;
+                                /* Smaller font size */
+                                border-radius: 4px;
+                                /* Slightly smaller border radius */
+                                transition: all 0.3s ease;
+                                text-decoration: none;
+                                display: inline-block;
+                            }
+
+                            .btn-download:hover {
+                                background: linear-gradient(90deg, #388e3c, #66bb6a);
+                                color: #fff;
+                                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+                                /* Slightly smaller shadow */
+                                text-decoration: none;
+                            }
+
+                            .btn-download i {
+                                margin-right: 6px;
+                                /* Adjusted spacing for smaller size */
+                            }
+                        </style>
                     </div>
                 </div>
             </div>
@@ -172,13 +229,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $assessment['type'] === 'exercise')
                 <div class="col-md-12">
                     <div class="card mb-4 shadow-sm">
                         <div class="card-header custom-header-submission">
-                            <h4 class="card-title mb-0"><i class="fas fa-upload"></i> Add Submission</h4>
+                            <h4 class="card-title mb-0"><i class="fas fa-upload"></i> <?php echo $existingSubmission ? 'Submission Status' : 'Add Submission'; ?></h4>
                         </div>
                         <div class="card-body text-center">
-                            <p>Click the button below to add your recitation and form details.</p>
-                            <a href="submit_tasmik.php?assessment_id=<?php echo htmlspecialchars($assessmentId); ?>" class="btn btn-success btn-lg">
-                                <i class="fas fa-paper-plane"></i> Add Submission
-                            </a>
+                            <?php if ($existingSubmission): ?>
+                                <!-- Display Existing Submission -->
+                                <div class="alert alert-success">
+                                    <i class="fas fa-check-circle"></i> You have already submitted for this assessment.
+                                    <br><strong>Submitted At:</strong> <?php echo date('F j, Y, g:i a', strtotime($existingSubmission['submitted_at'])); ?>
+                                    <br><strong>Status:</strong> <?php echo ucfirst($existingSubmission['status']); ?>
+                                </div>
+
+                                <?php if (!empty($existingSubmission['file_path'])): ?>
+                                    <p><strong>Audio Recording:</strong>
+                                        <a href="<?php echo htmlspecialchars($existingSubmission['file_path']); ?>" target="_blank" class="btn btn-info btn-sm">
+                                            <i class="fas fa-headphones"></i> Listen to Recording
+                                        </a>
+                                    </p>
+                                <?php endif; ?>
+
+                                <!-- Get tasmik details -->
+                                <?php
+                                $tasmikSQL = "SELECT * FROM tasmik WHERE tasmikid LIKE 'VLE%' AND studentid = ? ORDER BY submitted_at DESC LIMIT 1";
+                                $tasmikStmt = $conn->prepare($tasmikSQL);
+                                $tasmikStmt->bind_param("s", $studentId);
+                                $tasmikStmt->execute();
+                                $tasmikResult = $tasmikStmt->get_result();
+
+                                if ($tasmikResult->num_rows > 0) {
+                                    $tasmikDetails = $tasmikResult->fetch_assoc();
+                                ?>
+                                    <div class="mt-3 text-start">
+                                        <h5>Submission Details:</h5>
+                                        <ul class="list-group">
+                                            <li class="list-group-item"><strong>Juzuk:</strong> <?php echo $tasmikDetails['juzuk']; ?></li>
+                                            <li class="list-group-item"><strong>Pages:</strong> <?php echo $tasmikDetails['start_page']; ?> to <?php echo $tasmikDetails['end_page']; ?></li>
+                                            <li class="list-group-item"><strong>Ayah:</strong> <?php echo $tasmikDetails['start_ayah']; ?> to <?php echo $tasmikDetails['end_ayah']; ?></li>
+                                        </ul>
+                                    </div>
+                                <?php } ?>
+
+                            <?php else: ?>
+                                <p>Click the button below to add your recitation and form details.</p>
+                                <a href="submit_tasmik_murajaah.php?type=<?php echo $assessment['type']; ?>&id=<?php echo htmlspecialchars($assessmentId); ?>" class="btn btn-success btn-lg">
+                                    <i class="fas fa-paper-plane"></i> Add Submission
+                                </a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>

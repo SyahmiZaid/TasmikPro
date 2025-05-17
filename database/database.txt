@@ -70,10 +70,11 @@ CREATE TABLE `tasmik` (
     `start_ayah` INT NOT NULL,
     `end_ayah` INT NOT NULL,
     `live_conference` ENUM('yes', 'no') NOT NULL,
-    .status'	enum('pending', 'approved', 'rejected'),
+    `status` ENUM('pending', 'accepted', 'repeated') DEFAULT 'pending',
+    `feedback` TEXT DEFAULT NULL,
     `submitted_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`studentid`) REFERENCES `student`(`studentid`) ON DELETE CASCADE ON UPDATE CASCADE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Table: halaqah --
 CREATE TABLE halaqah (
@@ -109,7 +110,6 @@ CREATE TABLE `zoom_meetings` (
   `studentid` VARCHAR(50) NOT NULL,
   `teacherid` VARCHAR(50) NOT NULL,
   `meeting_id` VARCHAR(50) NOT NULL,
-  `password` VARCHAR(50) NOT NULL,
   `meeting_link` VARCHAR(255) NOT NULL,
   `scheduled_at` DATETIME NOT NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT current_timestamp(),
@@ -117,6 +117,18 @@ CREATE TABLE `zoom_meetings` (
   UNIQUE KEY `tasmikid` (`tasmikid`),
   CONSTRAINT `zoom_meetings_ibfk_1` FOREIGN KEY (`tasmikid`) REFERENCES `tasmik` (`tasmikid`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `tasmik_recordings` (
+  `recordingid` VARCHAR(50) NOT NULL,
+  `meeting_id` INT(11) NOT NULL,
+  `recording_path` VARCHAR(255) NOT NULL,
+  `duration` INT DEFAULT NULL,
+  `file_size` INT DEFAULT NULL,
+  `recording_type` ENUM('full', 'partial') DEFAULT 'full',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`recordingid`),
+  FOREIGN KEY (`meeting_id`) REFERENCES `zoom_meetings` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table: vle_courses
 CREATE TABLE `vle_courses` (
@@ -138,25 +150,6 @@ CREATE TABLE `vle_enrollment` (
   FOREIGN KEY (`courseid`) REFERENCES `vle_courses` (`courseid`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-
--- Table: vle_tasmik_submissions
-CREATE TABLE `vle_tasmik_submissions` (
-  `submissionid` VARCHAR(50) NOT NULL,
-  `studentid` VARCHAR(50) NOT NULL,
-  `teacherid` VARCHAR(50) NOT NULL,
-  `juzuk` INT NOT NULL,
-  `start_page` INT NOT NULL,
-  `end_page` INT NOT NULL,
-  `start_ayah` INT NOT NULL,
-  `end_ayah` INT NOT NULL,
-  `audio_path` VARCHAR(255) NOT NULL,  -- Path to the uploaded audio file
-  `status` ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
-  `submitted_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`submissionid`),
-  FOREIGN KEY (`studentid`) REFERENCES `student` (`studentid`) ON DELETE CASCADE,
-  FOREIGN KEY (`teacherid`) REFERENCES `teacher` (`teacherid`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
 -- Table: vle_assessments (Combines Assignments & Quizzes)
 CREATE TABLE `vle_assessments` (
   `assessmentid` VARCHAR(50) NOT NULL,
@@ -167,7 +160,6 @@ CREATE TABLE `vle_assessments` (
   `type` ENUM('exercise', 'note', 'tasmik', 'murajaah') NOT NULL,  
   `open_date` DATETIME DEFAULT NULL,  -- NEW: When the assessment becomes visible
   `due_date` DATETIME NULL,  -- Now NOT NULL to ensure all assessments have a deadline
-  `duration_minutes` INT DEFAULT NULL,  -- For quizzes (if applicable)
   `attachment_path` VARCHAR(255) DEFAULT NULL,  
   `allow_resubmission` BOOLEAN DEFAULT FALSE,  -- Allow resubmission before the deadline
   `status` ENUM('draft', 'published', 'closed') DEFAULT 'published',  -- NEW: Track if assessment is active

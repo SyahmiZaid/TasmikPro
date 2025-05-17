@@ -1,6 +1,6 @@
 <?php
 $pageTitle = "Tasmik";
-$breadcrumb = "Pages  /  <a href='../student/tasmik_form.php' class='no-link-style' style='color: white;'>Tasmik</a>";
+$breadcrumb = "Pages  /  <a href='../student/tasmik_form.php' class='no-link-style'>Tasmik</a>";
 include '../include/header.php';
 require_once '../database/db_connection.php';
 
@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $end_page = $_POST['endPage'];
     $start_ayah = $_POST['startAyah'];
     $end_ayah = $_POST['endAyah'];
-    $live_conference = $_POST['liveConference'];
+    $live_conference = "no"; // Set live_conference to "no" by default
 
     // Prepare and bind
     $stmt = $conn->prepare("INSERT INTO tasmik (tasmikid, studentid, tasmik_date, juzuk, start_page, end_page, start_ayah, end_ayah, live_conference) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
@@ -142,19 +142,7 @@ $result = $stmt->get_result();
                                 <label for="endAyah">End Ayah:</label>
                                 <input type="number" class="form-control" id="endAyah" name="endAyah" min="0" required>
                             </div>
-                            <div class="form-group">
-                                <label for="liveConference">Live Conference:</label>
-                                <div class="selectgroup w-30">
-                                    <label class="selectgroup-item">
-                                        <input type="radio" name="liveConference" value="no" class="selectgroup-input" required>
-                                        <span class="selectgroup-button">No</span>
-                                    </label>
-                                    <label class="selectgroup-item">
-                                        <input type="radio" name="liveConference" value="yes" class="selectgroup-input" required>
-                                        <span class="selectgroup-button">Yes</span>
-                                    </label>
-                                </div>
-                            </div>
+                            <!-- Removed Live Conference Option -->
                             <button type="submit" class="btn btn-primary">Submit</button>
                         </form>
                     </div>

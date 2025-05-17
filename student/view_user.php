@@ -451,24 +451,27 @@ if ($role === 'student') {
                     <?php endif; ?>
                 </div>
 
-                <!-- Replace the existing back button with this code -->
+                <!-- Back Button Path -->
                 <div class="action-buttons">
                     <?php
-                    // Determine which page to go back to based on the user's role
-                    $backPage = '../admin/manage_student.php';
-                    if ($role === 'teacher') {
-                        $backPage = '../admin/manage_teacher.php';
-                    } 
-                    // Check if there's a specific 'from' parameter in the URL
+                    // Determine which page to go back to based on the current user's role (from session)
+                    $backPage = '../admin/manage_student.php'; // Default to admin page
+
+                    // Check if the current user is a teacher (from session)
+                    if (isset($_SESSION['role']) && $_SESSION['role'] === 'teacher') {
+                        $backPage = '../teacher/manage_student.php';
+                    }
+
+                    // Override with 'from' parameter if it exists
                     if (isset($_GET['from']) && !empty($_GET['from'])) {
                         $backPage = htmlspecialchars($_GET['from']);
                     }
                     ?>
                     <a href="<?php echo $backPage; ?>" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left mr-2"></i>Back to List
+                        <i class="fas fa-arrow-left mr-2" style="margin-right: 5px;"></i>Back to List
                     </a>
                     <a href="edit_user.php?id=<?php echo $userId; ?>&role=<?php echo $role; ?>" class="btn btn-primary">
-                        <i class="fas fa-edit mr-2"></i>Edit
+                        <i class="fas fa-edit mr-2" style="margin-right: 5px;"></i>Edit
                     </a>
                 </div>
             </div>

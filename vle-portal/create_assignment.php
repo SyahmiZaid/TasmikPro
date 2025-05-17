@@ -57,10 +57,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $status = 'draft';
     }
 
+    // Generate assessment ID based on the course, date, and number of assessments
+    $date = date('Y-m-d'); // Current date
+    $month = date('m'); // Current month
+
+    // Count the number of assessments created for the course on the current day
+    $sql = "SELECT COUNT(*) AS assessment_count FROM vle_assessments WHERE courseid = ? AND DATE(created_at) = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ss", $courseId, $date);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+    $assessmentCount = $row['assessment_count'] + 1; // Increment count for the new assessment
+
+    // Generate the assessment ID
+    $assessmentId = sprintf("ASS%s%s%02d%02d", substr($courseId, -3), $month, date('d'), $assessmentCount);
+
     // Insert assignment into database
-    $assessmentId = uniqid('assess_');
-    $sql = "INSERT INTO vle_assessments (assessmentid, courseid, teacherid, title, description, type, open_date, due_date, attachment_path, allow_resubmission, status) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    $sql = "INSERT INTO vle_assessments (assessmentid, courseid, teacherid, title, description, type, open_date, due_date, attachment_path, allow_resubmission, status, created_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("sssssssssis", $assessmentId, $courseId, $teacherId, $title, $description, $type, $openDate, $dueDate, $attachmentPath, $allowResubmission, $status);
 

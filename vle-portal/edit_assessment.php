@@ -44,8 +44,6 @@ if (isset($_GET['id'])) {
         exit;
     }
 
-    // echo "<div class='alert alert-info' style='margin-top: 80px;'>Assessment Teacher ID: " . $assessment['teacherid'] . "<br>Your Teacher ID: " . $_SESSION['teacherid'] . "</div>";
-
     // Check if current teacher is the owner of this assessment
     if ((string)$assessment['teacherid'] != (string)$_SESSION['teacherid']) {
         echo "<div class='alert alert-danger text-center' style='margin-top: 40px;'>You don't have permission to edit this assessment.</div>";
@@ -66,10 +64,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $status = $_POST['status'];
     $allowResubmission = isset($_POST['allow_resubmission']) ? 1 : 0;
     $openDate = !empty($_POST['open_date']) ? $_POST['open_date'] : null;
-    $durationMinutes = !empty($_POST['duration_minutes']) ? $_POST['duration_minutes'] : null;
 
     // Validate form inputs
-    if (empty($title) || empty($description) || empty($dueDate)) {
+    if (empty($title) || empty($description) || ($type != 'note' && empty($dueDate))) {
         $errorMsg = "Please fill in all required fields.";
     } else {
         // Handle file upload if a new file is uploaded or remove the current attachment
@@ -117,7 +114,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                       type = ?, 
                       due_date = ?, 
                       open_date = ?, 
-                      duration_minutes = ?, 
                       attachment_path = ?, 
                       allow_resubmission = ?, 
                       status = ? 
@@ -125,13 +121,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $stmt = $conn->prepare($query);
             $stmt->bind_param(
-                "sssssisiss",
+                "sssssisss",
                 $title,
                 $description,
                 $type,
                 $dueDate,
                 $openDate,
-                $durationMinutes,
                 $attachmentPath,
                 $allowResubmission,
                 $status,
@@ -148,6 +143,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 
+<!-- Include SweetAlert2 Library -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <div class="container-fluid" style="margin-top: 80px;">
     <div class="row">
         <div class="col-12">
@@ -159,11 +157,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
 
             <?php if (!empty($successMsg)): ?>
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <strong>Success!</strong> <?php echo $successMsg; ?>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-                <meta http-equiv="refresh" content="0.8;url=view_assessment.php?id=<?php echo $assessmentId; ?>">
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        Swal.fire({
+                            title: 'Success!',
+                            text: '<?php echo $successMsg; ?>',
+                            icon: 'success',
+                            confirmButtonText: 'OK'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                window.location.href = 'view_assessment.php?id=<?php echo $assessmentId; ?>';
+                            }
+                        });
+                    });
+                </script>
             <?php endif; ?>
 
             <!-- Edit Assessment Form -->
@@ -192,41 +199,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <div class="col-md-6 mb-3">
                                     <label for="type" class="form-label">Assessment Type <span class="text-danger">*</span></label>
                                     <select class="form-select" id="type" name="type" required>
-                                        <option value="assignment" <?php echo ($assessment['type'] == 'assignment') ? 'selected' : ''; ?>>Assignment</option>
-                                        <option value="quiz" <?php echo ($assessment['type'] == 'quiz') ? 'selected' : ''; ?>>Quiz</option>
+                                        <option value="note" <?php echo ($assessment['type'] == 'note') ? 'selected' : ''; ?>>Note</option>
+                                        <option value="tasmik" <?php echo ($assessment['type'] == 'tasmik') ? 'selected' : ''; ?>>Tasmik</option>
+                                        <option value="murajaah" <?php echo ($assessment['type'] == 'murajaah') ? 'selected' : ''; ?>>Murajaah</option>
+                                        <option value="exercise" <?php echo ($assessment['type'] == 'exercise') ? 'selected' : ''; ?>>Exercise</option>
                                     </select>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Schedule Section -->
-                        <div class="mb-4">
+                        <div class="mb-4" id="schedule-section">
                             <h6 class="text-primary mb-3">Schedule</h6>
                             <div class="row">
-                                <div class="col-md-6 mb-3">
+                                <div class="col-md-6 mb-3" id="open-date-group">
                                     <label for="open_date" class="form-label">Open Date</label>
                                     <input type="datetime-local" class="form-control" id="open_date" name="open_date"
                                         value="<?php echo !empty($assessment['open_date']) ? date('Y-m-d\TH:i', strtotime($assessment['open_date'])) : ''; ?>">
                                     <small class="text-muted">When students can first see this assessment</small>
                                 </div>
-                                <div class="col-md-6 mb-3">
+                                <div class="col-md-6 mb-3" id="due-date-group">
                                     <label for="due_date" class="form-label">Due Date <span class="text-danger">*</span></label>
                                     <input type="datetime-local" class="form-control" id="due_date" name="due_date"
                                         value="<?php echo date('Y-m-d\TH:i', strtotime($assessment['due_date'])); ?>" required>
                                 </div>
                             </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="duration_minutes" class="form-label">Duration (Minutes)</label>
-                                    <input type="number" class="form-control" id="duration_minutes" name="duration_minutes"
-                                        value="<?php echo htmlspecialchars($assessment['duration_minutes'] ?? ''); ?>" min="0">
-                                    <small class="text-muted">For quizzes only (leave blank for unlimited)</small>
-                                </div>
-                            </div>
                         </div>
 
                         <!-- Submission Options -->
-                        <div class="mb-4">
+                        <div class="mb-4" id="submission-options">
                             <h6 class="text-primary mb-3">Submission Options</h6>
                             <div class="form-check mb-3">
                                 <input class="form-check-input" type="checkbox" value="1" id="allow_resubmission" name="allow_resubmission"
@@ -299,15 +300,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div>
 
 <script>
-    // Show relevant fields based on assessment type
+    // Handle showing/hiding fields based on assessment type
     document.getElementById('type').addEventListener('change', function() {
-        var durationsField = document.getElementById('duration_minutes');
-        var durationRow = durationsField.closest('.row');
-
-        if (this.value === 'quiz') {
-            durationRow.style.display = 'flex';
+        var selectedType = this.value;
+        var scheduleSection = document.getElementById('schedule-section');
+        var dueDateGroup = document.getElementById('due-date-group');
+        var openDateGroup = document.getElementById('open-date-group');
+        var submissionOptions = document.getElementById('submission-options');
+        
+        // Show/hide fields based on type
+        if (selectedType === 'note') {
+            scheduleSection.style.display = 'none';
+            submissionOptions.style.display = 'none';
+            
+            // Make due date not required for notes
+            document.getElementById('due_date').removeAttribute('required');
         } else {
-            durationRow.style.display = 'none';
+            scheduleSection.style.display = 'block';
+            dueDateGroup.style.display = 'block';
+            openDateGroup.style.display = 'block';
+            submissionOptions.style.display = 'block';
+            
+            // Make due date required for other assessment types
+            document.getElementById('due_date').setAttribute('required', 'required');
         }
     });
 

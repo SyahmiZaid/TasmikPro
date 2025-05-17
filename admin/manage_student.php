@@ -59,7 +59,7 @@ $result = $stmt->get_result();
                                 </thead>
                                 <tbody>
                                     <?php while ($row = $result->fetch_assoc()): ?>
-                                        <tr>
+                                        <tr data-id="<?php echo htmlspecialchars($row['studentid']); ?>">
                                             <td><?php echo htmlspecialchars($row['studentid']); ?></td>
                                             <td><?php echo ucwords(htmlspecialchars($row['student_name'])); ?></td>
                                             <td><?php echo htmlspecialchars($row['form']); ?></td>
@@ -93,34 +93,6 @@ $result = $stmt->get_result();
     </div>
 </div>
 
-<!-- Modal for displaying student details -->
-<div class="modal fade" id="studentDetailModal" tabindex="-1" role="dialog" aria-labelledby="studentDetailModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title" id="studentDetailModalLabel">Student Details</h5>
-                <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p><strong>Student ID:</strong> <span id="modalStudentId"></span></p>
-                <p><strong>Name:</strong> <span id="modalStudentName"></span></p>
-                <p><strong>Email:</strong> <span id="modalStudentEmail"></span></p>
-                <p><strong>Halaqah ID:</strong> <span id="modalHalaqahId"></span></p>
-                <p><strong>Parent ID:</strong> <span id="modalParentId"></span></p>
-                <p><strong>Form:</strong> <span id="modalForm"></span></p>
-                <p><strong>Class:</strong> <span id="modalClass"></span></p>
-                <p><strong>IC:</strong> <span id="modalIc"></span></p>
-                <p><strong>Gender:</strong> <span id="modalGender"></span></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <?php include '../include/footer.php'; ?>
 
 <script>
@@ -135,7 +107,7 @@ $result = $stmt->get_result();
         // Handle remove student button click
         $('.remove-student').click(function(event) {
             event.stopPropagation(); // Prevent the row click event from triggering
-            var studentId = $(this).closest('tr').data('id');
+            var studentId = $(this).closest('tr').data('id'); // Retrieve studentid from data-id
 
             if (confirm('Are you sure you want to remove this student?')) {
                 // Perform the remove action (e.g., send an AJAX request to remove the student)
@@ -144,6 +116,8 @@ $result = $stmt->get_result();
                 }, function(response) {
                     alert(response);
                     location.reload();
+                }).fail(function() {
+                    alert('Failed to remove student. Please try again.');
                 });
             }
         });

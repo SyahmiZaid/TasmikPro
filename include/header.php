@@ -206,8 +206,8 @@ $user = $result->fetch_assoc();
                                     <p>Manage Virtual Learning</p>
                                 </a>
                             </li>
-                            <li class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == '../teacher/live_conference.php' ? 'active' : ''; ?>">
-                                <a href="../teacher/live_conference.php">
+                            <li class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == '../live-conference/live_conference_schedule.php' ? 'active' : ''; ?>">
+                                <a href="../live-conference/live_conference_schedule.php">
                                     <i class="fas fa-video"></i> <!-- Icon for Live Conference -->
                                     <p>Live Conference</p>
                                 </a>
@@ -229,6 +229,12 @@ $user = $result->fetch_assoc();
                                 <a href="../vle-portal/vle_student.php">
                                     <i class="fas fa-chalkboard-teacher"></i> <!-- Icon for VLE -->
                                     <p>Virtual Learning</p>
+                                </a>
+                            </li>
+                            <li class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == '../student/live_conference.php' ? 'active' : ''; ?>">
+                                <a href="../student/live_conference.php">
+                                    <i class="fas fa-video"></i> <!-- Icon for Live Conference -->
+                                    <p>Live Conference</p>
                                 </a>
                             </li>
                             <li class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == '../student/tasmik_progress.php' ? 'active' : ''; ?>">
